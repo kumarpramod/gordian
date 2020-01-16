@@ -3,6 +3,7 @@ from github import GithubException
 import datetime
 import logging
 import os
+from gordian.files import YamlFile, JsonFile
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +36,25 @@ class Repo:
         else:
             self.branch_name = f"refs/heads/{datetime.datetime.now().strftime('%Y-%m-%d-%H%M%S.%f')}"
 
-    def get_files(self):
-        if self.files:
-            return self.files
+    def get_objects(self, filename):
+        if filename.endswith('.yaml'):
+            return YamlFile(self.get_file(filename))
+        if filename.endswith('.json'):
+            return JsonFile(self.get_file(filename))
 
-        contents = self.repo.get_contents("")
-        while contents:
-            file_content = contents.pop(0)
-            if file_content.path == 'version':
-                self.version_file = file_content
-            if file_content.type == 'dir':
-                contents.extend(self.repo.get_contents(file_content.path))
-            else:
-                self.files.append(file_content)
+    def get_files(self):
+        if not self.files:
+            contents = self.repo.get_contents("")
+            while contents:
+                file_content = contents.pop(0)
+                if file_content.path == 'version':
+                    self.version_file = file_content
+                if file_content.type == 'dir':
+                    contents.extend(self.repo.get_contents(file_content.path))
+                else:
+                    self.files.append(file_content)
+
+        return self.files
 
     def get_file(self, filename):
         for file in self.get_files():
